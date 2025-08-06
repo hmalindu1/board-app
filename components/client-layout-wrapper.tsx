@@ -11,16 +11,15 @@ export function ClientLayoutWrapper({ children }: ClientLayoutWrapperProps) {
 
 
   return (
-    <div className="h-screen flex flex-col">
-      <header className="">
-        <Header
-        />
+    <div className="h-screen flex flex-col overflow-hidden">
+      <header className="flex-shrink-0">
+        <Header />
       </header>
-      <div className="flex flex-row">
-        <aside className="">
+      <div className="flex flex-1 overflow-hidden">
+        <aside className="flex-shrink-0">
           <Sidebar />
         </aside>
-        <div className="h-full">{children}</div>
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
   )
