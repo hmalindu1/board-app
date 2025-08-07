@@ -1,9 +1,10 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useMemo } from "react"
 import Image from "next/image"
 import { Plus, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useTaskStore, type Task, type Status } from "@/lib/store"
 import User from "@/public/icons/user.svg"
 import Message from "@/public/icons/message.svg"
 import Calendar from "@/public/icons/calendar.svg"
@@ -13,234 +14,53 @@ import Report from "@/public/icons/report.svg"
 import Flash from "@/public/icons/flash.svg"
 import ImagePreview from "@/public/icons/image.svg"
 
-interface Task {
-  id: string
-  title: string
-  category:
-    | "Research"
-    | "Design"
-    | "Feedback"
-    | "Other"
-    | "Presentation"
-    | "Interface"
-    | "UX Research"
-  categoryColor: string
-  assignees: number
-  priority?: string
-  links?: number
-  comments?: number
-  dueDate?: string
-  hasImage?: boolean
-  hasGroupCall?: boolean
-  reports?: number
-}
-
 interface Column {
-  id: string
+  id: Status
   title: string
   color: string
   bgColor: string
-  tasks: Task[]
 }
 
-const kanbanData: Column[] = [
+const kanbanColumns: Column[] = [
   {
-    id: "todo",
+    id: "TODO",
     title: "To Do",
     color: "#6B7280",
     bgColor: "#F3F4F6",
-    tasks: [
-      {
-        id: "1",
-        title: "User Interview",
-        category: "Research",
-        categoryColor: "#AEE753",
-        assignees: 1,
-        priority: "Low",
-        links: 2,
-        comments: 2,
-        dueDate: "Tomorrow",
-      },
-      {
-        id: "2",
-        title: "Design System",
-        category: "Design",
-        categoryColor: "#EF4444",
-        assignees: 2,
-        priority: "Medium",
-        links: 3,
-        comments: 8,
-        reports: 2,
-      },
-      {
-        id: "3",
-        title: "Speech",
-        category: "Other",
-        categoryColor: "#6B7280",
-        assignees: 3,
-        priority: "Low",
-        links: 1,
-        comments: 3,
-      },
-      {
-        id: "4",
-        title: "Wireframe",
-        category: "Design",
-        categoryColor: "#EF4444",
-        assignees: 3,
-        priority: "High",
-        hasImage: true,
-      },
-    ],
   },
   {
-    id: "progress",
+    id: "IN_PROGRESS",
     title: "In Progress",
     color: "Black",
     bgColor: "#F59E0B",
-    tasks: [
-      {
-        id: "5",
-        title: "UI Design",
-        category: "Design",
-        categoryColor: "#EF4444",
-        assignees: 2,
-        priority: "High",
-        links: 2,
-        comments: 1,
-        dueDate: "Tomorrow",
-      },
-      {
-        id: "6",
-        title: "Check Clients Feedback",
-        category: "Feedback",
-        categoryColor: "#3B82F6",
-        assignees: 3,
-        priority: "Low",
-        comments: 8,
-        dueDate: "22 April, 2022",
-        hasImage: true,
-      },
-      {
-        id: "7",
-        title: "Copyright",
-        category: "Presentation",
-        categoryColor: "#F59E0B",
-        assignees: 1,
-        priority: "Low",
-        comments: 4,
-        dueDate: "22 April, 2022",
-      },
-      {
-        id: "8",
-        title: "Filter sorting",
-        category: "UX Research",
-        categoryColor: "#F59E0B",
-        assignees: 2,
-        priority: "Low",
-      },
-    ],
   },
   {
-    id: "approved",
+    id: "APPROVED",
     title: "Approved",
     color: "Black",
     bgColor: "#AEE753",
-    tasks: [
-      {
-        id: "9",
-        title: "Prototype",
-        category: "Research",
-        categoryColor: "#AEE753",
-        assignees: 3,
-        priority: "Low",
-        links: 35,
-        comments: 243,
-      },
-      {
-        id: "10",
-        title: "Detail Page",
-        category: "Design",
-        categoryColor: "#EF4444",
-        assignees: 3,
-        priority: "Low",
-        links: 6,
-        comments: 28,
-        hasImage: true,
-      },
-      {
-        id: "11",
-        title: "Animation preloaders",
-        category: "Interface",
-        categoryColor: "#6B7280",
-        assignees: 1,
-        priority: "High",
-        links: 4,
-        comments: 9,
-      },
-      {
-        id: "12",
-        title: "Sorting category",
-        category: "UX Research",
-        categoryColor: "#F59E0B",
-        assignees: 3,
-        priority: "High",
-      },
-    ],
   },
   {
-    id: "reject",
+    id: "REJECT",
     title: "Reject",
     color: "#FFFFFF",
     bgColor: "#EF4444",
-    tasks: [
-      {
-        id: "13",
-        title: "Group Management",
-        category: "Other",
-        categoryColor: "#6B7280",
-        assignees: 1,
-        priority: "Low",
-        comments: 329,
-        hasGroupCall: true,
-      },
-      {
-        id: "14",
-        title: "Design System",
-        category: "Design",
-        categoryColor: "#EF4444",
-        assignees: 1,
-        priority: "Low",
-        links: 3,
-        comments: 8,
-        reports: 2,
-      },
-      {
-        id: "15",
-        title: "Slider controls",
-        category: "Interface",
-        categoryColor: "#6B7280",
-        assignees: 2,
-        priority: "Low",
-        links: 8,
-        comments: 31,
-      },
-      {
-        id: "16",
-        title: "Slider controls",
-        category: "Design",
-        categoryColor: "#EF4444",
-        assignees: 3,
-        priority: "Low",
-        hasImage: true,
-      },
-    ],
   },
 ]
 
 const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
+  const { dragTask } = useTaskStore()
+
+  const handleDragStart = () => {
+    dragTask(task.id)
+  }
+
   return (
-    <div className="bg-white rounded-lg px-4 py-2 mb-3 shadow-sm border !border-gray-100 hover:shadow-md transition-shadow">
+    <div
+      className="bg-white rounded-lg px-4 py-2 mb-3 shadow-sm border !border-gray-100 hover:shadow-md transition-shadow cursor-move"
+      draggable
+      onDragStart={handleDragStart}
+    >
       {/* Category badge with color indicator */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -274,23 +94,25 @@ const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
               key={index}
               className="w-[24px] h-[24px] rounded-full bg-gray-400 border-1 border-white flex items-center justify-center text-white text-xs font-medium"
             >
-              <Image src={User} alt="Logo" className="h-[24px]" />
+              <Image src={User} alt="User" className="h-[24px]" />
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-1 bg-gray-200/50 rounded px-1 py-1">
-          <Image src={Flash} alt="Logo" className="h-[12px]" />
-          <span className="text-[8px] text-gray-400 font-medium">
-            {task.priority}
-          </span>
-        </div>
+        {task.priority && (
+          <div className="flex items-center gap-1 bg-gray-200/50 rounded px-1 py-1">
+            <Image src={Flash} alt="Priority" className="h-[12px]" />
+            <span className="text-[8px] text-gray-400 font-medium">
+              {task.priority}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Image placeholder for tasks that have attachments */}
       {task.hasImage && (
         <div className="w-full h-[90px] bg-gray-700 rounded mb-3 flex items-center justify-center">
           <div className="w-6 h-6 border border-gray-500 rounded flex items-center justify-center">
-            <Image src={ImagePreview} alt="Logo" className="h-[12px]" />
+            <Image src={ImagePreview} alt="Image" className="h-[12px]" />
           </div>
         </div>
       )}
@@ -301,19 +123,19 @@ const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
         <div className="flex items-center gap-3">
           {task.links && (
             <div className="flex items-center gap-1">
-              <Image src={Link} alt="Logo" className="h-[16px]" />
+              <Image src={Link} alt="Links" className="h-[16px]" />
               <span>{task.links}</span>
             </div>
           )}
           {task.comments && (
             <div className="flex items-center gap-1">
-              <Image src={Message} alt="Logo" className="h-[16px]" />
+              <Image src={Message} alt="Comments" className="h-[16px]" />
               <span>{task.comments}</span>
             </div>
           )}
           {task.hasGroupCall && (
             <div className="flex items-center gap-1">
-              <Image src={Alert} alt="Logo" className="h-[16px]" />
+              <Image src={Alert} alt="Group Call" className="h-[16px]" />
               <span className="text-blue-500">Group Call</span>
             </div>
           )}
@@ -322,14 +144,14 @@ const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
         <div className="flex items-center gap-2">
           {task.dueDate && (
             <div className="flex items-center gap-1">
-              <Image src={Calendar} alt="Logo" className="h-[16px]" />
+              <Image src={Calendar} alt="Due Date" className="h-[16px]" />
               <span>Due: {task.dueDate}</span>
             </div>
           )}
 
           {task.reports && (
             <div className="flex items-center gap-1">
-              <Image src={Report} alt="Logo" className="h-[16px]" />
+              <Image src={Report} alt="Reports" className="h-[16px]" />
               <span className="text-red-500 font-medium">
                 {task.reports} Reports
               </span>
@@ -342,6 +164,25 @@ const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
 }
 
 const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
+  const { tasks, draggedTask, updateTask, dragTask } = useTaskStore()
+
+  const filteredTasks = useMemo(
+    () => tasks.filter((task) => task.status === column.id),
+    [tasks, column.id]
+  )
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    if (!draggedTask) return
+
+    updateTask(draggedTask, column.id)
+    dragTask(null)
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+  }
+
   return (
     <div className="flex flex-col w-[288px] min-h-screen">
       {/* Header area with white background */}
@@ -368,11 +209,20 @@ const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
       </div>
 
       {/* Content area with light gray background */}
-      <div className="flex-1 bg-gray-50 px-6 pb-6 pt-6">
+      <div
+        className="flex-1 bg-gray-50 px-6 pb-6 pt-6"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+      >
         <div className="space-y-0">
-          {column.tasks.map((task) => (
+          {filteredTasks.map((task) => (
             <TaskCard key={task.id} task={task} />
           ))}
+          {filteredTasks.length === 0 && (
+            <div className="text-center text-gray-400 text-sm py-8">
+              Drop tasks here
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -380,6 +230,12 @@ const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
 }
 
 export const KanbanBoard: React.FC = () => {
+  const { tasks } = useTaskStore()
+
+  useEffect(() => {
+    useTaskStore.persist.rehydrate()
+  }, [])
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="bg-white">
@@ -390,10 +246,10 @@ export const KanbanBoard: React.FC = () => {
           />
 
           <div className="flex flex-shrink-0">
-            {kanbanData.map((column, index) => (
+            {kanbanColumns.map((column, index) => (
               <div key={column.id} className="flex">
                 <KanbanColumn column={column} />
-                {index < kanbanData.length - 1 && (
+                {index < kanbanColumns.length - 1 && (
                   <div className="w-px bg-gray-200 flex-shrink-0" />
                 )}
               </div>
