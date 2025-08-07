@@ -164,10 +164,28 @@ const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
 }
 
 const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
-  const { tasks, draggedTask, updateTask, dragTask } = useTaskStore()
+  const { tasks, draggedTask, updateTask, dragTask, searchQuery } =
+    useTaskStore()
 
-  const filteredTasks = useMemo(
-    () => tasks.filter((task) => task.status === column.id),
+  const filteredTasks = useMemo(() => {
+    let filtered = tasks.filter((task) => task.status === column.id)
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(
+        (task) =>
+          task.title.toLowerCase().includes(query) ||
+          task.category.toLowerCase().includes(query) ||
+          (task.priority && task.priority.toLowerCase().includes(query)) ||
+          (task.dueDate && task.dueDate.toLowerCase().includes(query))
+      )
+    }
+
+    return filtered
+  }, [tasks, column.id, searchQuery])
+
+  const totalTasksInColumn = useMemo(
+    () => tasks.filter((task) => task.status === column.id).length,
     [tasks, column.id]
   )
 
@@ -196,6 +214,11 @@ const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
             }}
           >
             {column.title}
+            {searchQuery.trim() && (
+              <span className="text-xs opacity-70">
+                ({filteredTasks.length}/{totalTasksInColumn})
+              </span>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -218,11 +241,29 @@ const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
           {filteredTasks.map((task) => (
             <TaskCard key={task.id} task={task} />
           ))}
-          {filteredTasks.length === 0 && (
+          {filteredTasks.length === 0 && totalTasksInColumn === 0 && (
             <div className="text-center text-gray-400 text-sm py-8">
-              Drop tasks here
+              No tasks in this column
             </div>
           )}
+          {filteredTasks.length === 0 &&
+            totalTasksInColumn > 0 &&
+            searchQuery.trim() && (
+              <div className="text-center text-gray-400 text-sm py-8">
+                <div className="mb-2">No tasks match "{searchQuery}"</div>
+                <div className="text-xs">
+                  {totalTasksInColumn} task{totalTasksInColumn !== 1 ? "s" : ""}{" "}
+                  hidden by search
+                </div>
+              </div>
+            )}
+          {filteredTasks.length === 0 &&
+            totalTasksInColumn > 0 &&
+            !searchQuery.trim() && (
+              <div className="text-center text-gray-400 text-sm py-8">
+                Drop tasks here
+              </div>
+            )}
         </div>
       </div>
     </div>

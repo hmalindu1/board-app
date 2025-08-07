@@ -31,12 +31,14 @@ export type State = {
   draggedTask: string | null
   isLoading: boolean
   error: string | null
+  searchQuery: string
 }
 
 export type Actions = {
   dragTask: (id: string | null) => void
   updateTask: (id: string, status: Status) => void
   fetchTasks: () => Promise<void>
+  setSearchQuery: (query: string) => void
 }
 
 export const useTaskStore = create<State & Actions>()(
@@ -46,6 +48,7 @@ export const useTaskStore = create<State & Actions>()(
       draggedTask: null,
       isLoading: false,
       error: null,
+      searchQuery: "",
 
       dragTask: (id) => set({ draggedTask: id }),
 
@@ -55,6 +58,8 @@ export const useTaskStore = create<State & Actions>()(
             task.id === id ? { ...task, status } : task
           ),
         })),
+
+      setSearchQuery: (query) => set({ searchQuery: query }),
 
       fetchTasks: async () => {
         if (get().tasks.length > 0) return
@@ -91,6 +96,7 @@ export const useTaskStore = create<State & Actions>()(
       partialize: (state) => ({
         tasks: state.tasks,
         draggedTask: state.draggedTask,
+        searchQuery: state.searchQuery,
       }),
     }
   )
