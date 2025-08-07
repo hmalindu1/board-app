@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { Plus, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -49,7 +49,9 @@ const kanbanColumns: Column[] = [
 ]
 
 const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
-  const { dragTask } = useTaskStore()
+  const { dragTask, draggedTask } = useTaskStore()
+
+  const isBeingDragged = draggedTask === task.id
 
   const handleDragStart = () => {
     dragTask(task.id)
@@ -57,7 +59,15 @@ const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
 
   return (
     <div
-      className="bg-white rounded-lg px-4 py-2 mb-3 shadow-sm border !border-gray-100 hover:shadow-md transition-shadow cursor-move"
+      className={`
+        bg-white rounded-lg px-4 py-2 mb-3 shadow-sm border 
+        transition-all duration-200 cursor-move
+        ${
+          isBeingDragged
+            ? "!border-blue-400 shadow-lg opacity-60 scale-95"
+            : "!border-gray-100 hover:shadow-md hover:scale-[1.01]"
+        }
+      `}
       draggable
       onDragStart={handleDragStart}
     >
@@ -92,7 +102,7 @@ const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
           {Array.from({ length: task.assignees }).map((_, index) => (
             <div
               key={index}
-              className="w-[24px] h-[24px] rounded-full bg-gray-400 border-1 border-white flex items-center justify-center text-white text-xs font-medium"
+              className="w-[24px] h-[24px] rounded-full bg-gray-400 border-1 !border-white flex items-center justify-center text-white text-xs font-medium"
             >
               <Image src={User} alt="User" className="h-[24px]" />
             </div>
@@ -111,13 +121,13 @@ const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
       {/* Image placeholder for tasks that have attachments */}
       {task.hasImage && (
         <div className="w-full h-[90px] bg-gray-700 rounded mb-3 flex items-center justify-center">
-          <div className="w-6 h-6 border border-gray-500 rounded flex items-center justify-center">
+          <div className="w-6 h-6 border !border-gray-500 rounded flex items-center justify-center">
             <Image src={ImagePreview} alt="Image" className="h-[12px]" />
           </div>
         </div>
       )}
 
-      {/* Bottom metadata row with links, comments, due dates, etc. */}
+      {/* Bottom metadata row with links, comments, due dates */}
       <div className="border-t !border-gray-200 pt-2" />
       <div className="flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center gap-3">
@@ -166,6 +176,7 @@ const TaskCard: React.FC<{ task: Task }> = ({ task }) => {
 const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
   const { tasks, draggedTask, updateTask, dragTask, searchQuery } =
     useTaskStore()
+  const [isDropZoneActive, setIsDropZoneActive] = useState(false)
 
   const filteredTasks = useMemo(() => {
     let filtered = tasks.filter((task) => task.status === column.id)
@@ -189,16 +200,48 @@ const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
     [tasks, column.id]
   )
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    if (!draggedTask) return
+  const canAcceptDrop =
+    draggedTask && tasks.find((t) => t.id === draggedTask)?.status !== column.id
 
-    updateTask(draggedTask, column.id)
-    dragTask(null)
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDropZoneActive(false)
+
+    if (draggedTask && canAcceptDrop) {
+      updateTask(draggedTask, column.id)
+      dragTask(null)
+    }
   }
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
+    if (canAcceptDrop) {
+      e.dataTransfer.dropEffect = "move"
+    }
+  }
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    if (canAcceptDrop) {
+      setIsDropZoneActive(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX
+    const y = e.clientY
+
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDropZoneActive(false)
+    }
+  }
+
+  const dropZoneState = {
+    isHighlighted: isDropZoneActive && canAcceptDrop,
+    showDropIndicator: draggedTask && canAcceptDrop,
   }
 
   return (
@@ -226,44 +269,59 @@ const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
             className="h-6 w-6 p-0 hover:bg-gray-100"
           >
             <Plus className="h-4 w-4" />
-            <MoreHorizontal className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Content area with light gray background */}
+      {/* Content area with drop zone styling */}
       <div
-        className="flex-1 bg-gray-50 px-6 pb-6 pt-6"
+        className={`
+          flex-1 px-6 pb-6 pt-6 transition-all duration-200 relative
+          ${
+            dropZoneState.isHighlighted
+              ? "bg-blue-50 ring-2 ring-blue-300 ring-inset"
+              : "bg-gray-50"
+          }
+        `}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
       >
         <div className="space-y-0">
           {filteredTasks.map((task) => (
             <TaskCard key={task.id} task={task} />
           ))}
-          {filteredTasks.length === 0 && totalTasksInColumn === 0 && (
+
+          {/* Simplified empty states */}
+          {filteredTasks.length === 0 && (
             <div className="text-center text-gray-400 text-sm py-8">
-              No tasks in this column
+              {searchQuery.trim() ? (
+                <>
+                  <div>No tasks match "{searchQuery}"</div>
+                  {totalTasksInColumn > 0 && (
+                    <div className="text-xs mt-1">
+                      {totalTasksInColumn} task
+                      {totalTasksInColumn !== 1 ? "s" : ""} hidden
+                    </div>
+                  )}
+                </>
+              ) : totalTasksInColumn === 0 ? (
+                <>
+                  No tasks in this column
+                  {dropZoneState.showDropIndicator && (
+                    <div className="text-blue-500 text-xs mt-2">
+                      Drag a task here to get started
+                    </div>
+                  )}
+                </>
+              ) : dropZoneState.showDropIndicator ? (
+                <span className="text-blue-500">Drop your task here</span>
+              ) : (
+                "Drop tasks here"
+              )}
             </div>
           )}
-          {filteredTasks.length === 0 &&
-            totalTasksInColumn > 0 &&
-            searchQuery.trim() && (
-              <div className="text-center text-gray-400 text-sm py-8">
-                <div className="mb-2">No tasks match "{searchQuery}"</div>
-                <div className="text-xs">
-                  {totalTasksInColumn} task{totalTasksInColumn !== 1 ? "s" : ""}{" "}
-                  hidden by search
-                </div>
-              </div>
-            )}
-          {filteredTasks.length === 0 &&
-            totalTasksInColumn > 0 &&
-            !searchQuery.trim() && (
-              <div className="text-center text-gray-400 text-sm py-8">
-                Drop tasks here
-              </div>
-            )}
         </div>
       </div>
     </div>
@@ -271,19 +329,26 @@ const KanbanColumn: React.FC<{ column: Column }> = ({ column }) => {
 }
 
 export const KanbanBoard: React.FC = () => {
-  const { isLoading, error, fetchTasks } = useTaskStore()
+  const { isLoading, error, fetchTasks, draggedTask } = useTaskStore()
 
   useEffect(() => {
     useTaskStore.persist.rehydrate()
     fetchTasks()
   }, [])
 
+  useEffect(() => {
+    document.body.style.cursor = draggedTask ? "grabbing" : "default"
+    return () => {
+      document.body.style.cursor = "default"
+    }
+  }, [draggedTask])
+
   if (isLoading) {
     return (
       <div className="bg-gray-50 min-h-screen">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 !border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading tasks...</p>
           </div>
         </div>
@@ -328,14 +393,15 @@ export const KanbanBoard: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div
+      className={`bg-gray-50 min-h-screen ${draggedTask ? "select-none" : ""}`}
+    >
       <div className="bg-white">
         <div className="flex overflow-x-auto min-w-full">
           <div
             className="flex-1 bg-gray-200 min-w-0"
             style={{ width: "1px" }}
           />
-
           <div className="flex flex-shrink-0">
             {kanbanColumns.map((column, index) => (
               <div key={column.id} className="flex">
@@ -346,7 +412,6 @@ export const KanbanBoard: React.FC = () => {
               </div>
             ))}
           </div>
-
           <div
             className="flex-1 bg-gray-200 min-w-0"
             style={{ width: "1px" }}
