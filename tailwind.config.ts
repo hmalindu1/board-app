@@ -58,6 +58,7 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))",
         },
         amber: "hsl(var(--amber))",
+        lime: "hsl(var(--lime))",
       },
 
       borderRadius: {
