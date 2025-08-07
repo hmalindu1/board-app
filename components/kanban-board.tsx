@@ -383,16 +383,27 @@ export const KanbanBoard: React.FC = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="bg-white">
-        <div className="flex overflow-x-auto">
-          {kanbanData.map((column, index) => (
-            <div key={column.id} className="flex">
-              <KanbanColumn column={column} />
-              {/* Add divider line between columns, except after the last one */}
-              {index < kanbanData.length - 1 && (
-                <div className="w-px bg-gray-200 flex-shrink-0" />
-              )}
-            </div>
-          ))}
+        <div className="flex overflow-x-auto min-w-full">
+          <div
+            className="flex-1 bg-gray-200 min-w-0"
+            style={{ width: "1px" }}
+          />
+
+          <div className="flex flex-shrink-0">
+            {kanbanData.map((column, index) => (
+              <div key={column.id} className="flex">
+                <KanbanColumn column={column} />
+                {index < kanbanData.length - 1 && (
+                  <div className="w-px bg-gray-200 flex-shrink-0" />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="flex-1 bg-gray-200 min-w-0"
+            style={{ width: "1px" }}
+          />
         </div>
       </div>
     </div>

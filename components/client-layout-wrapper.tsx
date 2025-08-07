@@ -18,9 +18,9 @@ export function ClientLayoutWrapper({ children }: ClientLayoutWrapperProps) {
         <aside className="flex-shrink-0">
           <Sidebar />
         </aside>
-        <div className="flex-1 bg-gray-50 min-h-screen">
+        <div className="flex-1 bg-gray-50 flex flex-col overflow-hidden">
           <ProjectHeader />
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
       </div>
     </div>
